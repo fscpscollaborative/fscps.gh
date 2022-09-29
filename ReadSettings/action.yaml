@@ -1,0 +1,54 @@
+name: PowerShell script
+author: Oleksandr Nikolaiev
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  version:
+    description: The Dynamics Application Version
+    required: true
+    default: ''
+  get:
+    description: Specifies which properties to get from the settings file, default is all
+    required: false
+    default: ''
+  environment:
+    description: Merge settings from specific environment
+    required: false
+    default: ''
+outputs:
+  SettingsJson:
+    description: Settings in compressed Json format
+    value: ${{ steps.readsettings.outputs.SettingsJson }}
+  GitHubRunnerJson:
+    description: GitHubRunner in compressed Json format
+    value: ${{ steps.readsettings.outputs.GitHubRunnerJson }}
+  VersionsJson:
+    description: Versions in compressed Json format
+    value: ${{ steps.readsettings.outputs.VersionsJson }}
+  EnvironmentsJson:
+    description: Environments in compressed Json format
+    value: ${{ steps.readsettings.outputs.EnvironmentsJson }}
+  EnvironmentCount:
+    description: Number of environments in array
+    value: ${{ steps.readsettings.outputs.EnvironmentCount }}
+  source_branch:
+    description: Source branch
+    value: ${{ steps.readsettings.outputs.SOURCE_BRANCH }}
+  type:
+    description: Repo type
+    value: ${{ steps.readsettings.outputs.type }}
+runs:
+  using: composite
+  steps:
+    - run: try { ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -dynamicsEnvironment '${{ inputs.environment }}' -dynamicsVersion '${{ inputs.version }}' -token '${{ inputs.token }}'} catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+      id: readsettings
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

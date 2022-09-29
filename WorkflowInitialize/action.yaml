@@ -1,0 +1,11 @@
+name: PowerShell script
+author: Oleksandr Nikolaiev 
+runs:
+  using: composite
+  steps:
+    - run: try { ${{ github.action_path }}/WorkflowInitialize.ps1 } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+      id: workflowinitialize
+      shell: powershell
+branding:
+  icon: terminal
+  color: blue

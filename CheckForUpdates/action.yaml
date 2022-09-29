@@ -1,0 +1,43 @@
+name: PowerShell script
+author: Oleksandr Nikolaiev
+permissions:
+  contents: write
+  pull-requests: write
+  workflows: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  update:
+    description: Set this input to Y in order to update AL-Go System Files if needed
+    required: false
+    default: 'N'
+  settingsJson:
+    description: Settings from repository in compressed Json format
+    required: false
+    default: ''
+  secretsJson:
+    description: Secrets from repository in compressed Json format
+    required: false
+    default: ''
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: 'N'
+  type:
+    description: Repo type
+    required: true
+    default: 'FSCM'
+runs:
+  using: composite
+  steps:
+    - run: try { ${{ github.action_path }}/CheckForUpdates.ps1 -type '${{ inputs.type }}' -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -update ('${{ inputs.update }}' -eq 'Y') -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue
