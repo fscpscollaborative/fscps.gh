@@ -228,15 +228,12 @@ function ReadSettings {
 
     # Read Settings file
     $settings = [ordered]@{
-        "artifact"                               = ""
         "companyName"                            = ""
         "currentBranch"                          = $branchName
         "sourceBranch"                           = ""
         "repoName"                               = $repoName
-        "versioningStrategy"                     = 0
-        "failOn"                                 = "error"
-        "templateUrl"                            = "https://github.com/ciellos-dev/FSC-PS-Template@main"
-        "templateBranch"                         = ""
+        "templateUrl"                            = "https://github.com/ciellosinc/FSC-PS-Template"
+        "templateBranch"                         = "main"
         "githubRunner"                           = "windows-latest"
         "buildVersion"                           = ""
         "uploadPackageToLCS"                     = $false
@@ -244,10 +241,10 @@ function ReadSettings {
         "nugetFeedUserName"                      = ""
         "nugetFeedUserSecretName"                = ""
         "nugetFeedPasswordSecretName"            = ""
-        "models"                                 = ""
         "nugetSourcePath"                        = ""
-        "githubSecrets"                          = ""
         "nugetPackagesPath"                      = "NuGets"
+        "models"                                 = ""
+        "githubSecrets"                          = ""
         "buildPath"                              = "_bld"
         "metadataPath"                           = "PackagesLocalDirectory"
         "lcsEnvironmentId"                       = ""
@@ -260,7 +257,6 @@ function ReadSettings {
         "azClientsecretSecretname"               = ""
         "azVmname"                               = ""
         "azVmrg"                                 = ""
-        "alwaysBuildAllProjects"                 = $false
         "deployablePackagePath"                  = "artifacts"
         "generatePackages"                       = $true
         "modelsIntoPackagePattern"               = "*"
@@ -274,7 +270,7 @@ function ReadSettings {
         "ciBranches"                             = "main,release"
         "deployScheduleCron"                     = "1 * * * *"
         "secretsList"                            = @('nugetFeedPasswordSecretName','nugetFeedUserSecretName','lcsUsernameSecretname','lcsPasswordSecretname','azClientsecretSecretname','repoTokenSecretName')
-        "Environments"                           = @()
+
     }
 
     $gitHubFolder = ".github"
@@ -313,6 +309,322 @@ function ReadSettings {
     }
 
     $settings
+}
+
+function AnalyzeRepo {
+    Param(
+        [hashTable] $settings,
+        [string] $baseFolder,
+        [string] $insiderSasToken,
+        [switch] $doNotCheckArtifactSetting,
+        [switch] $doNotIssueWarnings
+    )
+
+    if (!$runningLocal) {
+        Write-Host "::group::Analyzing repository"
+    }
+
+    # Check applicationDependency
+    [Version]$settings.applicationDependency | Out-null
+
+    Write-Host "Checking type"
+    if ($settings.type -eq "PTE") {
+        if (!$settings.Contains('enablePerTenantExtensionCop')) {
+            $settings.Add('enablePerTenantExtensionCop', $true)
+        }
+        if (!$settings.Contains('enableAppSourceCop')) {
+            $settings.Add('enableAppSourceCop', $false)
+        }
+    }
+    elseif ($settings.type -eq "AppSource App" ) {
+        if (!$settings.Contains('enablePerTenantExtensionCop')) {
+            $settings.Add('enablePerTenantExtensionCop', $false)
+        }
+        if (!$settings.Contains('enableAppSourceCop')) {
+            $settings.Add('enableAppSourceCop', $true)
+        }
+        if ($settings.enableAppSourceCop -and (-not ($settings.appSourceCopMandatoryAffixes))) {
+            throw "For AppSource Apps with AppSourceCop enabled, you need to specify AppSourceCopMandatoryAffixes in $FnSCMSettingsFile"
+        }
+    }
+    else {
+        throw "The type, specified in $FnSCMSettingsFile, must be either 'Per Tenant Extension' or 'AppSource App'. It is '$($settings.type)'."
+    }
+
+    $artifact = $settings.artifact
+    if ($artifact.Contains('{INSIDERSASTOKEN}')) {
+        if ($insiderSasToken) {
+            $artifact = $artifact.replace('{INSIDERSASTOKEN}', $insiderSasToken)
+        }
+        else {
+            throw "Artifact definition $artifact requires you to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
+        }
+    }
+
+    if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
+        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
+            $folder = $_
+            $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
+            $isTestApp = $false
+            $isBcptTestApp = $false
+            if ($appJson.PSObject.Properties.Name -eq "dependencies") {
+                $appJson.dependencies | ForEach-Object {
+                    if ($_.PSObject.Properties.Name -eq "AppId") {
+                        $id = $_.AppId
+                    }
+                    else {
+                        $id = $_.Id
+                    }
+                    if ($performanceToolkitApps.Contains($id)) { 
+                        $isBcptTestApp = $true
+                    }
+                    elseif ($testRunnerApps.Contains($id)) { 
+                        $isTestApp = $true
+                    }
+                }
+            }
+            if ($isBcptTestApp) {
+                $settings.bcptTestFolders += @($_.Name)
+            }
+            elseif ($isTestApp) {
+                $settings.testFolders += @($_.Name)
+            }
+            else {
+                $settings.appFolders += @($_.Name)
+            }
+        }
+    }
+
+    Write-Host "Checking appFolders and testFolders"
+    $dependencies = [ordered]@{}
+    1..3 | ForEach-Object {
+        $appFolder = $_ -eq 1
+        $testFolder = $_ -eq 2
+        $bcptTestFolder = $_ -eq 3
+        if ($appFolder) {
+            $folders = @($settings.appFolders)
+            $descr = "App folder"
+        }
+        elseif ($testFolder) {
+            $folders = @($settings.testFolders)
+            $descr = "Test folder"
+        }
+        elseif ($bcptTestFolder) {
+            $folders = @($settings.bcptTestFolders)
+            $descr = "Bcpt Test folder"
+        }
+        else {
+            throw "Internal error"
+        }
+        $folders | ForEach-Object {
+            $folderName = $_
+            if ($dependencies.Contains($folderName)) {
+                throw "$descr $folderName, specified in $FnSCMSettingsFile, is specified more than once."
+            }
+            $folder = Join-Path $baseFolder $folderName
+            $appJsonFile = Join-Path $folder "app.json"
+            $bcptSuiteFile = Join-Path $folder "bcptSuite.json"
+            $removeFolder = $false
+            if (-not (Test-Path $folder -PathType Container)) {
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $FnSCMSettingsFile, does not exist" }
+                $removeFolder = $true
+            }
+            elseif (-not (Test-Path $appJsonFile -PathType Leaf)) {
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $FnSCMSettingsFile, does not contain the source code for an app (no app.json file)" }
+                $removeFolder = $true
+            }
+            elseif ($bcptTestFolder -and (-not (Test-Path $bcptSuiteFile -PathType Leaf))) {
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $FnSCMSettingsFile, does not contain a BCPT Suite (bcptSuite.json)" }
+                $removeFolder = $true
+            }
+            if ($removeFolder) {
+                if ($appFolder) {
+                    $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
+                }
+                elseif ($testFolder) {
+                    $settings.testFolders = @($settings.testFolders | Where-Object { $_ -ne $folderName })
+                }
+                elseif ($bcptTestFolder) {
+                    $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $_ -ne $folderName })
+                }
+            }
+            else {
+                $dependencies.Add("$folderName", @())
+                try {
+                    $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
+                    if ($appJson.PSObject.Properties.Name -eq 'Dependencies') {
+                        $appJson.dependencies | ForEach-Object {
+                            if ($_.PSObject.Properties.Name -eq "AppId") {
+                                $id = $_.AppId
+                            }
+                            else {
+                                $id = $_.Id
+                            }
+                            if ($id -eq $applicationAppId) {
+                                if ([Version]$_.Version -gt [Version]$settings.applicationDependency) {
+                                    $settings.applicationDependency = $appDep
+                                }
+                            }
+                            else {
+                                $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+                            }
+                        }
+                    }
+                    if ($appJson.PSObject.Properties.Name -eq 'Application') {
+                        $appDep = $appJson.application
+                        if ([Version]$appDep -gt [Version]$settings.applicationDependency) {
+                            $settings.applicationDependency = $appDep
+                        }
+                    }
+                }
+                catch {
+                    throw "$descr $folderName, specified in $FnSCMSettingsFile, contains a corrupt app.json file. Error is $($_.Exception.Message)."
+                }
+            }
+        }
+    }
+    Write-Host "Application Dependency $($settings.applicationDependency)"
+
+    if (!$doNotCheckArtifactSetting) {
+        Write-Host "Checking artifact setting"
+        if ($artifact -eq "" -and $settings.updateDependencies) {
+            $artifact = Get-BCArtifactUrl -country $settings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+            if (-not $artifact) {
+                if ($insiderSasToken) {
+                    $artifact = Get-BCArtifactUrl -storageAccount bcinsider -country $settings.country -select all -sasToken $insiderSasToken | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+                    if (-not $artifact) {
+                        throw "No artifacts found for application dependency $($settings.applicationDependency)."
+                    }
+                }
+                else {
+                    throw "No artifacts found for application dependency $($settings.applicationDependency). If you are targetting an insider version, you need to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
+                }
+            }
+        }
+        
+        if ($artifact -like "https://*") {
+            $artifactUrl = $artifact
+            $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+            $artifactType = ("$artifactUrl////".Split('/')[3])
+            $version = ("$artifactUrl////".Split('/')[4])
+            $country = ("$artifactUrl////".Split('/')[5])
+            $sasToken = "$($artifactUrl)?".Split('?')[1]
+        }
+        else {
+            $segments = "$artifact/////".Split('/')
+            $storageAccount = $segments[0];
+            $artifactType = $segments[1]; if ($artifactType -eq "") { $artifactType = 'Sandbox' }
+            $version = $segments[2]
+            $country = $segments[3]; if ($country -eq "") { $country = $settings.country }
+            $select = $segments[4]; if ($select -eq "") { $select = "latest" }
+            $sasToken = $segments[5]
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $FnSCMSettingsFile"
+            }
+            $version = $artifactUrl.Split('/')[4]
+            $storageAccount = $artifactUrl.Split('/')[2]
+        }
+    
+        if ($settings.additionalCountries -or $country -ne $settings.country) {
+            if ($country -ne $settings.country -and !$doNotIssueWarnings) {
+                OutputWarning -message "artifact definition in $FnSCMSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
+            }
+            Write-Host "Checking Country and additionalCountries"
+            # AT is the latest published language - use this to determine available country codes (combined with mapping)
+            $ver = [Version]$version
+            Write-Host "https://$storageAccount/$artifactType/$version/$country"
+            $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
+            Write-Host "Latest AT artifacts $atArtifactUrl"
+            $latestATversion = $atArtifactUrl.Split('/')[4]
+            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
+                $countryArtifactUrl.Split('/')[5] # get country
+            }
+            Write-Host "Countries with artifacts $($countries -join ',')"
+            $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
+            Write-Host "Allowed Country codes $($allowedCountries -join ',')"
+            if ($allowedCountries -notcontains $settings.country) {
+                throw "Country ($($settings.country)), specified in $FnSCMSettingsFile is not a valid country code."
+            }
+            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
+            if ($illegalCountries) {
+                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $FnSCMSettingsFile."
+            }
+            $artifactUrl = $artifactUrl.Replace($artifactUrl.Split('/')[4],$atArtifactUrl.Split('/')[4])
+        }
+        else {
+            Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
+            $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
+            if (-not ($folders)) {
+                throw "Unable to download artifacts from $($artifactUrl.Split('?')[0]), please check $FnSCMSettingsFile."
+            }
+        }
+        $settings.artifact = $artifactUrl
+
+        if ([Version]$settings.applicationDependency -gt [Version]$version) {
+            throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
+        }
+    }
+
+    # unpack all dependencies and update app- and test dependencies from dependency apps
+    $settings.appDependencies + $settings.testDependencies | ForEach-Object {
+        $dep = $_
+        if ($dep -is [string]) {
+            # TODO: handle pre-settings - documentation pending
+        }
+    }
+
+    Write-Host "Updating app- and test Dependencies"
+    $dependencies.Keys | ForEach-Object {
+        $folderName = $_
+        $appFolder = $settings.appFolders.Contains($folderName)
+        if ($appFolder) { $prop = "appDependencies" } else { $prop = "testDependencies" }
+        $dependencies."$_" | ForEach-Object {
+            $id = $_.Id
+            $version = $_.version
+            $exists = $settings."$prop" | Where-Object { $_ -is [System.Collections.Specialized.OrderedDictionary] -and $_.id -eq $id }
+            if ($exists) {
+                if ([Version]$version -gt [Version]$exists.Version) {
+                    $exists.Version = $version
+                }
+            }
+            else {
+                $settings."$prop" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+            }
+        }
+    }
+
+    Write-Host "Analyzing Test App Dependencies"
+    if ($settings.testFolders) { $settings.installTestRunner = $true }
+    if ($settings.bcptTestFolders) { $settings.installPerformanceToolkit = $true }
+
+    $settings.appDependencies + $settings.testDependencies | ForEach-Object {
+        $dep = $_
+        if ($dep.GetType().Name -eq "OrderedDictionary") {
+            if ($testRunnerApps.Contains($dep.id)) { $settings.installTestRunner = $true }
+            if ($testFrameworkApps.Contains($dep.id)) { $settings.installTestFramework = $true }
+            if ($testLibrariesApps.Contains($dep.id)) { $settings.installTestLibraries = $true }
+            if ($performanceToolkitApps.Contains($dep.id)) { $settings.installPerformanceToolkit = $true }
+        }
+    }
+
+    if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
+        if (!$doNotIssueWarnings) { OutputWarning -message "No performance test apps found in bcptTestFolders in $FnSCMSettingsFile" }
+        $settings.doNotRunBcptTests = $true
+    }
+    if (!$settings.doNotRunTests -and -not $settings.testFolders) {
+        if (!$doNotIssueWarnings) { OutputWarning -message "No test apps found in testFolders in $FnSCMSettingsFile" }
+        $settings.doNotRunTests = $true
+    }
+    if (-not $settings.appFolders) {
+        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $FnSCMSettingsFile" }
+    }
+
+    $settings
+    if (!$runningLocal) {
+        Write-Host "::endgroup::"
+    }
 }
 
 function installModules {
