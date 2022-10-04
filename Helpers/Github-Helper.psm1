@@ -587,7 +587,7 @@ function Publish-GithubRelease
             ErrorAction = "Stop"
         }
         try {
-            Set-TlsLevel -Tls12
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             $release = Invoke-RestMethod @releaseParams
             $release
         }
@@ -633,14 +633,11 @@ function Publish-GithubRelease
                 }
 
                 try {
-                    Set-TlsLevel -Tls12
+                    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                     Invoke-RestMethod @assetParams
                 }
                 catch {
                     throw $_
-                }
-                finally {
-                    Set-TlsLevel -Revert
                 }
             }
         }
