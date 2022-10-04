@@ -409,6 +409,7 @@ try {
                 OutputInfo "ReleaseNotes:"
                 OutputInfo $releaseNotes
 
+                $targetBranch = ("$env:GITHUB_REF").Replace("origin/refs/heads/","")
                 #$status = invoke-git status --porcelain=v2
                 #OutputInfo "Git changes: $($status)"
                 #if ($status) {
@@ -421,7 +422,7 @@ try {
                     }
                     else {
                         invoke-git push -u $url $branch
-                        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --body "$releaseNotes" --base "$env:GITHUB_REF"
+                        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --body "$releaseNotes" --base "$targetBranch"
                     }
                 #}
                 #else {
@@ -430,10 +431,10 @@ try {
             }
             catch {
                 if ($directCommit) {
-                    throw "Failed to update FSC-PS System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+                    throw "Failed to update FSC-PS System Files. Make sure that the personal access token, defined in the secret called repoTokenSecretName, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
                 else {
-                    throw "Failed to create a pull-request to FSC-PS System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+                    throw "Failed to create a pull-request to FSC-PS System Files. Make sure that the personal access token, defined in the secret called repoTokenSecretName, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
             }
         }
