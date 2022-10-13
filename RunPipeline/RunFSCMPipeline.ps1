@@ -121,6 +121,13 @@ try {
     nuget sources remove -Name $settings.nugetFeedName -Source $settings.nugetSourcePath
     Write-Output "::endgroup::"
 
+    if($settings.useLocalNuGetStorage)
+    {
+        Get-FSCDefaultNuGets -PlatformVersion "$PlatformVersion" -ApplicationVersion "$ApplicationVersion"
+    }
+
+
+
     Write-Output "::group::Nuget add source"
     OutputInfo "======================================== Nuget add source"
     #Nuget add source
