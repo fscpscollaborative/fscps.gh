@@ -202,20 +202,8 @@ try {
     {
         Write-Output "::group::Generate packages"
         OutputInfo "======================================== Generate packages"
-        #check nuget instalation
-        $Az = Get-InstalledModule -Name AZ -ErrorAction SilentlyContinue
-        $DfoTools = Get-InstalledModule -Name d365fo.tools -ErrorAction SilentlyContinue
 
-        if([string]::IsNullOrEmpty($Az))
-        {
-            Install-Module -Name AZ -AllowClobber -Scope CurrentUser -Force -Confirm:$False -SkipPublisherCheck
-        }
-        if([string]::IsNullOrEmpty($DfoTools))
-        {
-            Install-Module -Name d365fo.tools -AllowClobber -Scope CurrentUser -Force -Confirm:$false
-        }
-
-
+        installModules @("d365fo.tools","AZ")
 
         $packageNamePattern = $settings.packageNamePattern;
 
@@ -316,11 +304,20 @@ try {
                 {
                     Write-Output "::group::Export axmodel file"
 
-                    $models | ForEach-Object{
-                        $modelFilePath = Export-D365Model -Path $artifactDirectory -Model $_ -BinDir $msFrameworkDirectory -MetaDataDir $msMetadataDirectory
-                        $modelFile = Get-Item $modelFilePath.File
-                        Rename-Item $modelFile.FullName (($_)+($modelFile.Extension)) -Force
+                    if($models.Split(","))
+                    {
+                        $models.Split(",") | ForEach-Object{
+                            $modelFilePath = Export-D365Model -Path $artifactDirectory -Model $_ -BinDir $msFrameworkDirectory -MetaDataDir $msMetadataDirectory
+                            $modelFile = Get-Item $modelFilePath.File
+                            Rename-Item $modelFile.FullName (($_)+($modelFile.Extension)) -Force
+                        }
                     }
+                    else {
+                        $modelFilePath = Export-D365Model -Path $artifactDirectory -Model $models -BinDir $msFrameworkDirectory -MetaDataDir $msMetadataDirectory
+                        $modelFile = Get-Item $modelFilePath.File
+                        Rename-Item $modelFile.FullName (($models)+($modelFile.Extension)) -Force
+                    }
+
 
                     Write-Output "::endgroup::"
                 }
