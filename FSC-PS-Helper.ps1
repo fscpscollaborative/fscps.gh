@@ -986,10 +986,11 @@ function Get-AXModelDisplayName {
     )
     process{
         $descriptorSearchPath = (Join-Path $ModelPath (Join-Path $ModelName "Descriptor"))
-        OutputInfo "Model Path $descriptorSearchPath"
+        #OutputInfo "Model Path $descriptorSearchPath"
         [xml]$xmlData = Get-Content (Get-ChildItem -Path $descriptorSearchPath -Filter *.xml)
         $modelDisplayName = $xmlData.SelectNodes("//AxModelInfo/DisplayName")
-        if(!$modelDisplayName){$ModelName}
+        if(!($modelDisplayName.InnerText)){$ModelName}
+        else{$modelDisplayName.InnerText}
     }
 }
 
@@ -1036,6 +1037,7 @@ function GenerateSolution {
         $SolutionFileData += $Line
         Foreach($model in $ModelName.Split(','))
         {
+            OutputInfo "Generate project for $model"
             $projectGuid = $projectGuids.Item($model)
             $modelDisplayName = Get-AXModelDisplayName -ModelName $model -ModelPath $MetadataPath 
             if ($Line -eq $ProjectPattern) 
