@@ -53,7 +53,7 @@ try {
             OutputInfo "Environment $($_.Name). Latest deployed commit is: $($result.Value)"
         }
         catch { 
-
+            OutputInfo $_.Exception.ToString()
         }
     })
 
