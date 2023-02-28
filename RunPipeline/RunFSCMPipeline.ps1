@@ -18,7 +18,9 @@ Set-StrictMode -Version 2.0
 
 
 try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\FSC-PS-Helper.ps1" -Resolve)
+    $helperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\FSC-PS-Helper.ps1" -Resolve
+    . ($helperPath)
+    
     $LastExitCode = 0
     $baseFolder = $ENV:GITHUB_WORKSPACE
     $workflowName = $env:GITHUB_WORKFLOW
@@ -173,7 +175,7 @@ try {
     $prebuildCustomScript = Join-Path $ENV:GITHUB_WORKSPACE '.FSC-PS\CustomScripts\PreBuild.ps1'
     if(Test-Path $prebuildCustomScript)
     {
-        & $prebuildCustomScript -settings $settings -githubContext $github
+        & $prebuildCustomScript -settings $settings -githubContext $github -helperPath $helperPath
     }
     ### Prebuild
 
@@ -210,7 +212,7 @@ try {
     $postbuildCustomScript = Join-Path $ENV:GITHUB_WORKSPACE '.FSC-PS\CustomScripts\PostBuild.ps1'
     if(Test-Path $postbuildCustomScript)
     {
-        & $postbuildCustomScript -settings $settings -githubContext $github
+        & $postbuildCustomScript -settings $settings -githubContext $github -helperPath $helperPath
     }
     ### Postbuild
     
@@ -269,17 +271,7 @@ try {
                 catch
                 {
                     Write-Output "  - $package (not an X++ binary folder, skip)"
-                    #$packagePath = Join-Path -Path "$($buildPath)\$($settings.metadataPath)" -ChildPath "$((Get-ChildItem $package).Directory.Name)"
-                    #$packageBinPath = Join-Path -Path "$packagePath" -ChildPath "bin"
-                    #if ((Test-Path -Path $packageBinPath) -and ((Get-ChildItem -Path $packageBinPath -Filter *.md).Count -gt 0))
-                    #{
-                    #    Write-Output $packageBinPath
-                    #    OutputInfo "  - $packagePath"
-                    #    $packages += $packagePath
-                    #}
                 }
-
-
             }
 
             $artifactDirectory = [System.IO.Path]::GetDirectoryName($deployablePackagePath)
