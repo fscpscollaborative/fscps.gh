@@ -147,12 +147,11 @@ try {
         $packageNamePattern = $packageNamePattern.Replace("RUNNUMBER", $ENV:GITHUB_RUN_NUMBER)
         $packageName = $packageNamePattern + ".zip"
         OutputInfo "Package name generated"
-
-        $packagePath = $buildPath 
-        Rename-Item -Path Join-Path $packagePath $ecommPackageName -NewName $packageName
+        
+        Rename-Item -Path Join-Path $buildPath $ecommPackageName -NewName $packageName
         OutputInfo "Package renamed"
 
-        $packagePath = Join-Path $packagePath $packageName
+        $packagePath = Join-Path $buildPath $packageName
 
         OutputInfo "Package name: $packageName"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "PACKAGE_NAME=$packageName"
@@ -160,7 +159,6 @@ try {
         OutputInfo "Package name: $packagePath"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "PACKAGE_PATH=$packagePath"
         Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_PATH=$packagePath"
-
 
         Write-Output "::endgroup::"
     }
