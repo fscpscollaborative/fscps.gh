@@ -63,7 +63,7 @@ try {
     $workflowName = $env:GITHUB_WORKFLOW
 
     $tempPath = "C:\Temp"
-    $buildPath = "$tempPath\Msdyn365.Commerce.Online"
+    $buildPath = Join-Path $tempPath "Msdyn365.Commerce.Online"
     Write-Output "::endgroup::"
 
     Write-Output "::group::Cleanup folder"
@@ -105,7 +105,7 @@ try {
     Copy-Item $ENV:GITHUB_WORKSPACE\* -Destination $buildPath -Recurse -Force
 
     ### yarn load dependencies
-    yarn
+    #yarn
 
     ### generate package
     yarn msdyn365 pack
@@ -125,8 +125,10 @@ try {
     {
         Write-Output "::group::Generate packages"
         OutputInfo "======================================== Generate packages"
-
+        
         $packageConfig = (Get-Content "$buildPath\package.json") | ConvertFrom-Json | ConvertTo-HashTable | ConvertTo-OrderedDictionary
+        OutputInfo "Parsed package.json file"
+
         $ecommPackageName = "$($packageConfig.name)-$($packageConfig.version).zip"
         $packageNamePattern = $settings.packageNamePattern;
         $packageNamePattern = $packageNamePattern.Replace("BRANCHNAME", $($settings.sourceBranch))
@@ -144,9 +146,11 @@ try {
         $packageNamePattern = $packageNamePattern.Replace("DATE", (Get-Date -Format "yyyyMMdd").ToString())
         $packageNamePattern = $packageNamePattern.Replace("RUNNUMBER", $ENV:GITHUB_RUN_NUMBER)
         $packageName = $packageNamePattern + ".zip"
+        OutputInfo "Package name generated"
 
         $packagePath = $buildPath 
         Rename-Item -Path Join-Path $packagePath $ecommPackageName -NewName $packageName
+        OutputInfo "Package renamed"
 
         $packagePath = Join-Path $packagePath $packageName
 
