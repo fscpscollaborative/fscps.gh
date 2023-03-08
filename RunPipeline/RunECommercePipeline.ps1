@@ -63,7 +63,7 @@ try {
     $workflowName = $env:GITHUB_WORKFLOW
 
     $tempPath = "C:\Temp"
-    $buildPath = Join-Path $tempPath "Msdyn365.Commerce.Online"
+    $buildPath = "$tempPath\Msdyn365.Commerce.Online"
     Write-Output "::endgroup::"
 
     Write-Output "::group::Cleanup folder"
