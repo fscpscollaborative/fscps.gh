@@ -63,7 +63,7 @@ try {
     $workflowName = $env:GITHUB_WORKFLOW
 
     $tempPath = "C:\Temp"
-    $buildPath = "$tempPath\Msdyn365.Commerce.Online"
+    $buildPath = Join-Path $tempPath "Msdyn365.Commerce.Online"
     Write-Output "::endgroup::"
 
     Write-Output "::group::Cleanup folder"
@@ -105,7 +105,7 @@ try {
     Copy-Item $ENV:GITHUB_WORKSPACE\* -Destination $buildPath -Recurse -Force
 
     ### yarn load dependencies
-    #yarn
+    yarn
 
     ### generate package
     yarn msdyn365 pack
