@@ -151,7 +151,7 @@ try {
         Rename-Item -Path Join-Path $buildPath $ecommPackageName -NewName $packageName
         OutputInfo "Package renamed"
 
-        $packagePath = Join-Path $buildPath $packageName
+        $packagePath = "$($buildPath)\$($packageName)"
 
         OutputInfo "Package name: $packageName"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "PACKAGE_NAME=$packageName"
