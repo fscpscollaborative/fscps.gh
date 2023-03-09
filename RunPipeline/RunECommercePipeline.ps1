@@ -100,7 +100,7 @@ try {
 
     #remove git folder
     Remove-Item $buildPath\.git -Recurse -Force -ErrorAction SilentlyContinue
-
+    Remove-Item $buildPath\src -Recurse -Force -ErrorAction SilentlyContinue
     #Copy branch files
     Copy-Item $ENV:GITHUB_WORKSPACE\* -Destination $buildPath -Recurse -Force
 
@@ -139,7 +139,7 @@ try {
         }
         else
         {
-            $packageNamePattern = $packageNamePattern.Replace("PACKAGENAME", $settings.packageName)
+            $packageNamePattern = $packageNamePattern.Replace("PACKAGENAME", $($settings.packageName)-$($packageConfig.version))
         }
 
         $packageNamePattern = $packageNamePattern.Replace("FNSCMVERSION", $DynamicsVersion)
