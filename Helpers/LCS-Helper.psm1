@@ -10,6 +10,7 @@ function GetUNHeader {
 
     return $headers
 }
+
 function GetToken {
     param (
         [string] $lcsClientId,
@@ -252,16 +253,16 @@ function ProcessingNuGet {
                 {$AssetName.ToLower().StartsWith("Microsoft.Dynamics.AX.Platform.CompilerPackage.".ToLower()) -or
                 $AssetName.ToLower().StartsWith("Microsoft.Dynamics.AX.Platform.DevALM.BuildXpp.".ToLower())} 
                 {  
-                    $curVer.data.PlatformVersion=$version;                 
+                    $curVer.data.PlatformVersion = Get-NewestNugetVersion $version $curVer.data.PlatformVersion;                 
                     break;
                 }
                 {$AssetName.ToLower().StartsWith("Microsoft.Dynamics.AX.Application.DevALM.BuildXpp.".ToLower()) -or
-                $AssetName.ToLower().StartsWith("Microsoft.Dynamics.AX.ApplicationSuite.DevALM.BuildXpp.")} 
+                $AssetName.ToLower().StartsWith("Microsoft.Dynamics.AX.ApplicationSuite.DevALM.BuildXpp.".ToLower())} 
                 {  
-                    $curVer.data.AppVersion=$version;
+                    $curVer.data.AppVersion = Get-NewestNugetVersion $version $curVer.data.AppVersion;
                     break;
                 }
-                    Default {}
+                Default {}
             }
             Set-Content -Path $versionsDefaultFile ($versions | Sort-Object{$_.version} | ConvertTo-Json)
         }   
@@ -528,6 +529,50 @@ function Remove-LcsAssetFile {
             Write-PSFMessage -Level Host -Message "Something went wrong while working against the LCS API." -Exception $PSItem.Exception
             Stop-PSFFunction -Message "Stopping because of errors" -StepsUpward 1
             return
+        }
+    }
+}
+
+function Get-FSCVersionFromPackageName
+{
+    param (
+        [string]$PackageName
+    )
+    begin{
+        $fscVersionRegex = [regex] "(([0-9]*[0-9])\.){2}(?:[0-9]*[0-9]?)\b"
+        $platUpdateRegex = [regex] "(?:[0-9]*[0-9])"
+    }
+    process{
+        $fscVersion = $fscVersionRegex.Match($PackageName).Value
+        if(-not $fscVersion)
+        {
+            if($PackageName.Contains("Plat Update"))
+            {
+                $platVersion = $platUpdateRegex.Match($PackageName).Value
+                $fscVersion = "10.0." + ($platVersion - 24)
+            }
+        }
+        return $fscVersion
+    }
+}
+function Get-NewestNugetVersion
+{
+    param (
+        [string]$Version1,
+        [string]$Version2
+    )
+    begin{
+        $reg = [regex] "\b(([0-9]*[0-9]).){4}\b"
+    }
+    process{
+        $ver1 = $reg.Match($Version1).Groups[1].Value
+        $ver2 = $reg.Match($Version2).Groups[1].Value
+        if($ver1 -gt $ver2)
+        {
+            $Version1
+        }
+        else {
+            $Version2
         }
     }
 }
