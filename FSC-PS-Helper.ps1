@@ -108,6 +108,10 @@ function OutputDebug {
         Write-Host "::Debug::$message"
     }
 }
+function Update-7ZipInstallation
+{
+    choco install 7zip
+}
 function Compress-7zipArchive {
     Param (
         [Parameter(Mandatory = $true)]
@@ -115,6 +119,7 @@ function Compress-7zipArchive {
         [string] $DestinationPath
     )
 
+    Update-7ZipInstallation
     $7zipPath = "$env:ProgramFiles\7-Zip\7z.exe"
 
     $use7zip = $false
@@ -144,7 +149,7 @@ function Expand-7zipArchive {
         [string] $Path,
         [string] $DestinationPath
     )
-
+    Update-7ZipInstallation
     $7zipPath = "$env:ProgramFiles\7-Zip\7z.exe"
 
     $use7zip = $false
