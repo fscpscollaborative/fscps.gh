@@ -1915,7 +1915,6 @@ function ClearExtension {
     )
     Write-Output ($filePath.BaseName.Replace($filePath.Extension,""))
 }
-
 function Sign-BinaryFile {
     param (
         [Parameter(HelpMessage = "The DigiCert host", Mandatory = $false)]
@@ -1980,10 +1979,15 @@ function Sign-BinaryFile {
             Set-Location $tempDirectory
             if(-not (Test-Path -Path .\smtools-windows-x64.msi ))
             {
-                Invoke-WebRequest -Method Get https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -Headers @{ "x-api-key" = "$($SM_API_KEY)"} -o .\smtools-windows-x64.msi 
-                msiexec /i smtools-windows-x64.msi /quiet /qn 
+                $smtools = "smtools-windows-x64.msi"
+                Write-Output "The '$smtools' not found. Downloading..."
+                Invoke-WebRequest -Method Get https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -Headers @{ "x-api-key" = "$($SM_API_KEY)"}  -OutFile .\$smtools -Verbose
+                Write-Output "Downloaded. Installing..."
+                msiexec /i $smtools /quiet /qn 
+                Write-Output "Installed."
+                Start-Sleep -Seconds 5
             }
-            Set-Location "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools"
+            Set-Location "$Env:Programfiles\DigiCert\DigiCert One Signing Manager Tools"
     
             if($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent){
                 Write-Output "===============Healthcheck================"
