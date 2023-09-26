@@ -274,7 +274,7 @@ try {
                             -SM_CLIENT_CERT_FILE_URL "$codeSignCertificateUrlSecretName" `
                             -SM_CLIENT_CERT_PASSWORD $(ConvertTo-SecureString $codeSignCertificatePasswordSecretName -AsPlainText -Force) `
                             -SM_CODE_SIGNING_CERT_SHA1_HASH "$codeSignCertificateHashSecretName" `
-                            -FILE ([string]$_.FullName) -Verbose
+                            -FILE ([string]$_.FullName)
         }
 
         Add-Content -Path $env:GITHUB_OUTPUT -Value "PACKAGE_NAME=$packageName"
@@ -348,6 +348,7 @@ try {
                 }  
                 Set-Location $baseProductInstallRoot
                 $extensionInstallPath = Join-Path $baseProductInstallRoot "Extensions/$(ClearExtension($sUInstallerPath))"
+                $extensionInstallPath
                 if(Test-Path $extensionInstallPath){
                     Write-Host
                     Write-Host "Copy the binary and symbol files into extensions folder."
