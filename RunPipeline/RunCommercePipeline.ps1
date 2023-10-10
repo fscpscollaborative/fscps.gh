@@ -309,10 +309,11 @@ try {
         Write-Output "::endgroup::"
         Write-Output "::group::Sign packages"
         #sign files
-        Get-ChildItem $artifactDirectory | Where-Object{$_.Extension -like ".exe"} | ForEach-Object
-        {          
+        
+        Get-ChildItem $artifactDirectory | Where-Object {$_.Extension -like ".exe"} | ForEach-Object{          
+            Write-Output "Signing File: '$($_.FullName)' ..."
             [string]$filePath = "$($_.FullName)"
-            OutputInfo "Signing File: '$($filePath)' ..."
+            
             switch ( $settings.codeSignType )
             {
                 "azure_sign_tool" {
