@@ -88,8 +88,9 @@ try {
     invoke-git checkout -b $branch $($settings.currentBranch)
 
     Update-D365FSCISVSource -archivePath $archivePath -targetPath $baseFolder
-
-    Remove-Item $archivePath -Force
+    Get-ChildItem $baseFolder
+    Remove-Item $archivePath -Force -ErrorAction SilentlyContinue
+    Remove-Item $baseFolder/$github.Payload.repository.name -Force -ErrorAction SilentlyContinue
 
     invoke-git status
     invoke-git add *
