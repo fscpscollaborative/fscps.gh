@@ -52,22 +52,17 @@ try {
         $DynamicsVersion = $settings.buildVersion
     }
 
-    $version = Get-VersionData -sdkVersion $DynamicsVersion
 
     if($settings.sourceBranch -eq "")
     {
         $settings.sourceBranch = $settings.currentBranch
     }
     $settings
-    $version
 
     #check nuget instalation
     installModules @("Az.Storage","d365fo.tools")
     #SourceBranchToPascakCase
     $settings.sourceBranch = [regex]::Replace(($settings.sourceBranch).Replace("refs/heads/","").Replace("/","_"), '(?i)(?:^|-|_)(\p{L})', { $args[0].Groups[1].Value.ToUpper() })
-
-    $PlatformVersion = $version.PlatformVersion
-    $ApplicationVersion = $version.AppVersion
 
     $sdkPath = ($settings.retailSDKZipPath)
     if (!(Test-Path -Path $sdkPath))
@@ -255,7 +250,7 @@ try {
             $packageNamePattern = $packageNamePattern.Replace("PACKAGENAME-", ""<#$settings.packageName#>)
         }
         $packageNamePattern = $packageNamePattern.Replace("BRANCHNAME", $($settings.sourceBranch))
-        $packageNamePattern = $packageNamePattern.Replace("FNSCMVERSION", $DynamicsVersion)
+        $packageNamePattern = $packageNamePattern.Replace("FNSCMVERSION", ""<#$DynamicsVersion#>)
         $packageNamePattern = $packageNamePattern.Replace("DATE", (Get-Date -Format "yyyyMMdd").ToString())
         $packageName = $packageNamePattern.Replace("RUNNUMBER", $ENV:GITHUB_RUN_NUMBER)
         
@@ -426,12 +421,12 @@ try {
                 }               
              }
 
-             OutputInfo "======================================== Validation info"
-             $MachineName = "vtx-nextgen-csu.eastus.cloudapp.azure.com"
-             $port = "443"
+            <#  OutputInfo "======================================== Validation info"
+            $MachineName = "vtx-nextgen-csu.eastus.cloudapp.azure.com"
+            $port = "443"
 
-             #if ($Env:baseProduct_UseSelfHost -ne "true") {
-                # IIS deployment requires the additional actions to start debugging
+            #if ($Env:baseProduct_UseSelfHost -ne "true") {
+            # IIS deployment requires the additional actions to start debugging
             
             $RetailServerRoot = "https://$($MachineName):$port/RetailServer"
         
@@ -441,6 +436,15 @@ try {
             #}
 
             Write-Output "::endgroup::"
+            #>
+
+            ### PostDeploy
+            $postdeployCustomScript = Join-Path $ENV:GITHUB_WORKSPACE '.FSC-PS\CustomScripts\PostDeploy.ps1'
+            if(Test-Path $postdeployCustomScript)
+            {
+                & $postdeployCustomScript -settings $settings -githubContext $github -helperPath $helperPath
+            }
+            ### PostDeploy
         }
 
     }
