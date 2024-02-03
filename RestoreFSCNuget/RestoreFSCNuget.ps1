@@ -10,6 +10,8 @@ try {
     $helperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\FSC-PS-Helper.ps1" -Resolve
     . $helperPath
 
+    installModules @("AZ.Storage")
+
     Write-Output "::group::Download default NuGet packages"
     OutputInfo "======================================== Download default NuGet"
 
