@@ -704,6 +704,30 @@ function GenerateSolution {
 
     Set-Location $PSScriptRoot
 }
+
+function GeneratePackagesConfig
+{
+    [CmdletBinding()]
+    param (
+        [string]$DynamicsVersion
+    )
+
+    Foreach($version in Get-Versions)
+    {
+        if($version.version -eq $DynamicsVersion)
+        {
+            $PlatformVersion = $version.data.PlatformVersion
+            $ApplicationVersion = $version.data.AppVersion
+        }
+    }
+
+    $NugetFolderPath =  Join-Path $PSScriptRoot 'NewBuild'
+    $PackagesConfigFileName = 'packages.config'
+    $NewPackagesFile = Join-Path $NugetFolderPath $PackagesConfigFileName
+    $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $PlatformVersion).Replace('ApplicationVersion', $ApplicationVersion)
+    Set-Content $NewPackagesFile $tempFile
+}
+
 function Update-RetailSDK
 {
     [CmdletBinding()]
