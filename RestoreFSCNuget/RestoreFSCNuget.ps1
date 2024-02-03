@@ -21,6 +21,7 @@ try {
     Write-Output "::group::Nuget install packages"
     OutputInfo "======================================== Nuget install packages"
 
+    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion
     nuget restore -PackagesDirectory ..\NuGets
     Write-Output "::endgroup::"
 }
