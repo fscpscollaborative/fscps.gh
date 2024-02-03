@@ -724,6 +724,7 @@ function GeneratePackagesConfig
     }
 
     $NugetFolderPath =  Join-Path $PSScriptRoot 'NewBuild'
+    New-Item -ItemType Directory -Path $NugetFolderPath
     $PackagesConfigFileName = 'packages.config'
     $NewPackagesFile = Join-Path $NugetFolderPath $PackagesConfigFileName
     $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $PlatformVersion).Replace('ApplicationVersion', $ApplicationVersion)
