@@ -4,9 +4,12 @@ inputs:
   version:
     description: The Dynamics Application Version
     required: true
+  packagesDirectory:
+    description: The directory where the packages should be restored to
+    required: true
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/RestoreFSCNuget.ps1 -DynamicsVersion '${{ inputs.version }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+    - run: try { ${{ github.action_path }}/RestoreFSCNuget.ps1 -DynamicsVersion '${{ inputs.version }}' -PackagesDirectory '${{ inputs.packagesDirectory }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
       id: restorefscnuget
       shell: PowerShell

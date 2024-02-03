@@ -1,6 +1,8 @@
 Param(
     [Parameter(HelpMessage = "DynamicsVersion", Mandatory = $true)]
-    [string] $DynamicsVersion
+    [string] $DynamicsVersion,
+    [Parameter(HelpMessage = "PackagesDirectory", Mandatory = $true)]
+    [string] $PackagesDirectory
 )
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -21,10 +23,12 @@ try {
     Write-Output "::group::Nuget install packages"
     OutputInfo "======================================== Nuget install packages"
 
-    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion
+    tree /F
+    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion 
     $tree = tree /F
     Write-Output $tree
-    nuget restore -PackagesDirectory ..\NuGets
+    Set-Location NewBuild
+    nuget restore -PackagesDirectory $PackagesDirectory
     Write-Output "::endgroup::"
 }
 catch {
