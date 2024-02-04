@@ -23,10 +23,7 @@ try {
     Write-Output "::group::Nuget install packages"
     OutputInfo "======================================== Nuget install packages"
 
-    tree /F
     GeneratePackagesConfig -DynamicsVersion $DynamicsVersion 
-    $tree = tree /F
-    Write-Output $tree
     Set-Location NewBuild
     nuget restore -PackagesDirectory $PackagesDirectory
     Write-Output "::endgroup::"
