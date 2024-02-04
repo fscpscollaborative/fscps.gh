@@ -543,7 +543,34 @@ function GenerateSolution {
         GenerateProjectFile -ModelName $project.Name -ProjectGuid $project.Value -MetadataPath $MetadataPath 
     }
 
+    $parameters = @{
+        DynamicsVersion = $DynamicsVersion
+        NugetFeedName = $NugetFeedName
+        NugetSourcePath = $NugetSourcePath
+        NugetFolderPath = $NugetFolderPath
+    }
+    GeneratePackagesConfig @parameters
+}
+
+function GeneratePackagesConfig
+{
+    [CmdletBinding()]
+    param (
+        [string]$DynamicsVersion,
+        [string]$NugetFeedName = '',
+        [string]$NugetSourcePath = '',
+        [string]$NugetFolderPath = ''
+    )
+
+    if (-not $NugetFolderPath) {
+        $NugetFolderPath =  Join-Path $PSScriptRoot 'NewBuild'
+    }
+    if (-not (Test-Path -Path $NugetFolderPath)) {
+        New-Item -ItemType Directory -Path $NugetFolderPath
+    }
+
     Set-Location $PSScriptRoot\Build
+
     #generate nuget.config
     $NugetConfigFileName = 'nuget.config'
     $NewNugetFile = Join-Path $NugetFolderPath $NugetConfigFileName
@@ -556,7 +583,6 @@ function GenerateSolution {
     }
     Set-Content $NewNugetFile $tempFile
 
-
     Foreach($version in Get-Versions)
     {
         if($version.version -eq $DynamicsVersion)
@@ -567,41 +593,6 @@ function GenerateSolution {
     }
 
     #generate packages.config
-    $PackagesConfigFileName = 'packages.config'
-    $NewPackagesFile = Join-Path $NugetFolderPath $PackagesConfigFileName
-    $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $PlatformVersion).Replace('ApplicationVersion', $ApplicationVersion)
-    Set-Content $NewPackagesFile $tempFile
-
-    Set-Location $PSScriptRoot
-}
-
-function GeneratePackagesConfig
-{
-    [CmdletBinding()]
-    param (
-        [string]$DynamicsVersion
-    )
-
-    Set-Location $PSScriptRoot\Build
-
-    $NugetFolderPath =  Join-Path $PSScriptRoot 'NewBuild'
-    New-Item -ItemType Directory -Path $NugetFolderPath
-
-    #generate nuget.config
-    $NugetConfigFileName = 'nuget.config'
-    $NewNugetFile = Join-Path $NugetFolderPath $NugetConfigFileName
-    $tempFile = (Get-Content $NugetConfigFileName).Replace('<add key="NugetFeedName" value="NugetSourcePath" />', '')
-    Set-Content $NewNugetFile $tempFile
-
-    #generate packages.config
-    Foreach($version in Get-Versions)
-    {
-        if($version.version -eq $DynamicsVersion)
-        {
-            $PlatformVersion = $version.data.PlatformVersion
-            $ApplicationVersion = $version.data.AppVersion
-        }
-    }
     $PackagesConfigFileName = 'packages.config'
     $NewPackagesFile = Join-Path $NugetFolderPath $PackagesConfigFileName
     $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $PlatformVersion).Replace('ApplicationVersion', $ApplicationVersion)
