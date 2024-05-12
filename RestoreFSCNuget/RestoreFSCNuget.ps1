@@ -23,14 +23,21 @@ try {
     if (-not (Test-Path $PackagesDirectory)) {
         New-Item -ItemType Directory -Force -Path $PackagesDirectory
     }
-    $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory
-    $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory
-    $null = Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory
-    $null = Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationSuiteDevALM -Path $PackagesDirectory
+    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory -Verbose
+    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory -Verbose
+    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory -Verbose
+    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationSuiteDevALM -Path $PackagesDirectory -Verbose
+
+    $tree = tree /F
+    Write-Output $tree
 
     OutputInfo "======================================== Nuget install packages"
     GeneratePackagesConfig -DynamicsVersion $DynamicsVersion 
     Set-Location NewBuild
+
+    $tree = tree /F
+    Write-Output $tree
+
     nuget restore -PackagesDirectory $PackagesDirectory
     Write-Output "::endgroup::"
 }
