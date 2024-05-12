@@ -20,6 +20,9 @@ try {
     $ApplicationVersion = $versionData.data.AppVersion
 
     OutputInfo "======================================== Download NuGet packages"
+    if (-not (Test-Path $PackagesDirectory)) {
+        New-Item -ItemType Directory -Force -Path $PackagesDirectory
+    }
     $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory
     $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory
     $null = Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory
