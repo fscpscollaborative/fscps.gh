@@ -20,27 +20,17 @@ try {
     $ApplicationVersion = $versionData.data.AppVersion
 
     OutputInfo "======================================== Download NuGet packages"
-    if (-not (Test-Path $PackagesDirectory)) {
-        New-Item -ItemType Directory -Force -Path $PackagesDirectory
-    }
-    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory -Verbose
-    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory -Verbose
-    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory -Verbose
-    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationSuiteDevALM -Path $PackagesDirectory -Verbose
-
-    $tree = tree /F
-    Write-Output $tree
+    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory -Force
+    Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory
+    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory
+    Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationSuiteDevALM -Path $PackagesDirectory
 
     OutputInfo "======================================== Nuget install packages"
-    $PackagesDirectoryFullPath = Get-Item -Path $PackagesDirectory -Verbose
-    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion -NugetFeedName "local" -NugetSourcePath $PackagesDirectoryFullPath.FullName -Verbose
+    $PackagesDirectoryFullPath = Get-Item -Path $PackagesDirectory
+    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion -NugetFeedName "local" -NugetSourcePath $PackagesDirectoryFullPath.FullName
     Set-Location NewBuild
 
-    $tree = tree /F
-    Write-Output $tree
-
     nuget restore -PackagesDirectory $PackagesDirectory
-    Write-Output "::endgroup::"
 }
 catch {
   OutputError -message $_.Exception.Message
