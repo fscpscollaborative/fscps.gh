@@ -32,7 +32,8 @@ try {
     Write-Output $tree
 
     OutputInfo "======================================== Nuget install packages"
-    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion 
+    $PackagesDirectoryFullPath = Get-Item -Path $PackagesDirectory -Verbose
+    GeneratePackagesConfig -DynamicsVersion $DynamicsVersion -NugetFeedName "local" -NugetSourcePath $PackagesDirectoryFullPath.FullName -Verbose
     Set-Location NewBuild
 
     $tree = tree /F
