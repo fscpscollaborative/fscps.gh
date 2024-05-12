@@ -12,17 +12,20 @@ try {
     $helperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\FSC-PS-Helper.ps1" -Resolve
     . $helperPath
 
-    installModules @("AZ.Storage")
+    installModules @("fscps.tools")
 
-    Write-Output "::group::Download default NuGet packages"
-    OutputInfo "======================================== Download default NuGet"
+    OutputInfo "======================================== Gather version info"
+    $versionData = Get-FSCPSVersionInfo -Version $DynamicsVersion
+    $PlatformVersion = $versionData.data.PlatformVersion
+    $ApplicationVersion = $versionData.data.AppVersion
 
-    Update-FSCNuGet -sdkVersion $DynamicsVersion
-    Write-Output "::endgroup::"
+    OutputInfo "======================================== Download NuGet packages"
+    $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformCompilerPackage -Path $PackagesDirectory
+    $null = Get-FSCPSNuget -Version $PlatformVersion -Type PlatformDevALM -Path $PackagesDirectory
+    $null = Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationDevALM -Path $PackagesDirectory
+    $null = Get-FSCPSNuget -Version $ApplicationVersion -Type ApplicationSuiteDevALM -Path $PackagesDirectory
 
-    Write-Output "::group::Nuget install packages"
     OutputInfo "======================================== Nuget install packages"
-
     GeneratePackagesConfig -DynamicsVersion $DynamicsVersion 
     Set-Location NewBuild
     nuget restore -PackagesDirectory $PackagesDirectory

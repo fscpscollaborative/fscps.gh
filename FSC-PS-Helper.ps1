@@ -582,20 +582,11 @@ function GeneratePackagesConfig
         $tempFile = (Get-Content $NugetConfigFileName).Replace('<add key="NugetFeedName" value="NugetSourcePath" />', '')
     }
     Set-Content $NewNugetFile $tempFile
-
-    Foreach($version in Get-Versions)
-    {
-        if($version.version -eq $DynamicsVersion)
-        {
-            $PlatformVersion = $version.data.PlatformVersion
-            $ApplicationVersion = $version.data.AppVersion
-        }
-    }
-
+    $version = Get-FSCPSVersionInfo -Version "$DynamicsVersion"
     #generate packages.config
     $PackagesConfigFileName = 'packages.config'
     $NewPackagesFile = Join-Path $NugetFolderPath $PackagesConfigFileName
-    $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $PlatformVersion).Replace('ApplicationVersion', $ApplicationVersion)
+    $tempFile = (Get-Content $PackagesConfigFileName).Replace('PlatformVersion', $version.data.PlatformVersion).Replace('ApplicationVersion', $version.data.AppVersion)
     Set-Content $NewPackagesFile $tempFile
 
     Set-Location $PSScriptRoot
